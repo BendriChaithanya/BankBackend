@@ -1,38 +1,47 @@
 package com.bank.config;
 
-import java.util.List;
+import java.io.IOException;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
+
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 public class CorsConfig {
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    public CorsFilter corsFilter() {
-        CorsConfiguration config = new CorsConfiguration();
+    public Filter corsFilter() {
+        return (request, response, chain) -> {
+            HttpServletRequest req = (HttpServletRequest) request;
+            HttpServletResponse res = (HttpServletResponse) response;
 
-        config.setAllowedOriginPatterns(List.of(
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "https://*.vercel.app"
-        ));
+            String origin = req.getHeader("Origin");
 
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("*"));
-        config.setAllowCredentials(false);
-        config.setMaxAge(3600L);
+            if (origin != null) {
+                res.setHeader("Access-Control-Allow-Origin", origin);
+            } else {
+                res.setHeader("Access-Control-Allow-Origin", "*");
+            }
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+            res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Origin");
+            res.setHeader("Access-Control-Expose-Headers", "*");
+            res.setHeader("Access-Control-Max-Age", "3600");
 
-        return new CorsFilter(source);
+            if ("OPTIONS".equalsIgnoreCase(req.getMethod())) {
+                res.setStatus(HttpServletResponse.SC_OK);
+                return;
+            }
+
+            chain.doFilter(request, response);
+        };
     }
 }
